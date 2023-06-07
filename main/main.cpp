@@ -4,12 +4,13 @@
 #include <opencv2/opencv.hpp>
 
 #include "viz.h"
+#include "edge_timer.h"
 #include "paddle_api.h"
 using namespace paddle::lite_api;
 
 
-static const int INPUT_W = 416;
-static const int INPUT_H = 416;
+static const int INPUT_W = 320;
+static const int INPUT_H = 320;
 
 
 int64_t ShapeProduction(const shape_t& shape) {
@@ -41,9 +42,9 @@ void blobFromImage(cv::Mat& img, float* blob){
       float r = (float)pix[0];
       float g = (float)pix[1];
       float b = (float)pix[2];
-      // r = ((r / 255.0) - 0.485) / 0.229;
-      // g = ((g / 255.0) - 0.456) / 0.224;
-      // b = ((b / 255.0) - 0.406) / 0.225;
+      r = ((r / 255.0) - 0.485) / 0.229;
+      g = ((g / 255.0) - 0.456) / 0.224;
+      b = ((b / 255.0) - 0.406) / 0.225;
       blob[0 * img_w * img_h + h * img_w + w] = r;
       blob[1 * img_w * img_h + h * img_w + w] = g;
       blob[2 * img_w * img_h + h * img_w + w] = b;
@@ -53,21 +54,19 @@ void blobFromImage(cv::Mat& img, float* blob){
 
 int main()
 {
+  Timer timer("all");
   cv::Mat img, rgb_img, pr_img;
-  img = cv::imread("shared/test2.jpg");
-  cv::cvtColor(img, rgb_img, cv::COLOR_BGR2RGB);
-  int img_w = img.cols;
-  int img_h = img.rows;
-  cv::resize(rgb_img, pr_img, cv::Size(416, 416));
 
   MobileConfig config;
-  config.set_model_from_file("shared/yolox.nb");
+  config.set_power_mode(static_cast<paddle::lite_api::PowerMode>(0));
+  config.set_threads(4);
+  config.set_model_from_file("shared/picodet.nb");
   std::shared_ptr<PaddlePredictor> predictor = CreatePaddlePredictor<MobileConfig>(config);
 
   std::unique_ptr<Tensor> image_tensor(std::move(predictor->GetInputByName("image")));
   std::unique_ptr<Tensor> scale_tensor(std::move(predictor->GetInputByName("scale_factor")));
 
-  image_tensor->Resize({1, 3, 416, 416});
+  image_tensor->Resize({1, 3, 320, 320});
   scale_tensor->Resize({1, 2});
 
   auto* image_data = image_tensor->mutable_data<float>();
@@ -80,32 +79,44 @@ int main()
   printf("%d %d\n", img.rows, img.cols);
   printf("%.2f %.2f\n", scale_data[0], scale_data[1]);
 
-  predictor->Run();
-
-  std::unique_ptr<const Tensor> res_tensor(std::move(predictor->GetTensor("multiclass_nms3_0.tmp_0")));
-  std::unique_ptr<const Tensor> num_tensor(std::move(predictor->GetTensor("multiclass_nms3_0.tmp_2")));
-  
-  // 转化为数据 
-  auto res_data = res_tensor->data<float>();
-  auto num_data = num_tensor->data<int>();
-
-  std::cout << num_data[0] << std::endl;
-  for (int i = 0; i < num_data[0]; i++)
+  for (int k = 0; k < 100; k++)
   {
-    const float* res = res_data + i * 6;
-    int cls = int(res[0]);
-    float score = res[1];
-    float x1 = res[2];
-    float y1 = res[3];
-    float x2 = res[4];
-    float y2 = res[5];
+    timer.start();
+    img = cv::imread("shared/test.jpg");
+    int img_w = img.cols;
+    int img_h = img.rows;
+    cv::cvtColor(img, rgb_img, cv::COLOR_BGR2RGB);
+    cv::resize(rgb_img, pr_img, cv::Size(320, 320));
+    blobFromImage(pr_img, image_data);
 
-    if (score < 0.2) continue;
-    printf("cls:%d score:%.2f x1:%.2f y1:%.2f x2:%.2f y2:%.2f\n", cls, score, x1, y1, x2, y2);
-    viz(img, cls, score, x1, y1, x2 - x1, y2 - y1);
+    predictor->Run();
+
+    std::unique_ptr<const Tensor> res_tensor(std::move(predictor->GetTensor("multiclass_nms3_0.tmp_0")));
+    std::unique_ptr<const Tensor> num_tensor(std::move(predictor->GetTensor("multiclass_nms3_0.tmp_2")));
+    
+    // 转化为数据 
+    auto res_data = res_tensor->data<float>();
+    auto num_data = num_tensor->data<int>();
+
+    std::cout << num_data[0] << std::endl;
+    for (int i = 0; i < num_data[0]; i++)
+    {
+      const float* res = res_data + i * 6;
+      int cls = int(res[0]);
+      float score = res[1];
+      float x1 = res[2];
+      float y1 = res[3];
+      float x2 = res[4];
+      float y2 = res[5];
+
+      if (score < 0.5) continue;
+      printf("cls:%d score:%.2f x1:%.2f y1:%.2f x2:%.2f y2:%.2f\n", cls, score, x1, y1, x2, y2);
+      viz(img, cls, score, x1, y1, x2 - x1, y2 - y1);
+    }
+    cv::imwrite("output.jpg", img);
+
+    timer.end();
   }
-
-  cv::imwrite("output.jpg", img);
 
   return 0;
 }
