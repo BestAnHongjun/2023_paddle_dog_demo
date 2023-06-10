@@ -10,6 +10,7 @@
 ```sh
 cd ~
 git clone https://gitee.com/an_hongjun/2023_paddle_dog_demo.git
+cd 2023_paddle_dog_demo
 ```
 ## 1.Nano1部署
 * 进入nano1-workspace目录
