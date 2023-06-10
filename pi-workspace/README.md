@@ -1,6 +1,6 @@
 # 关于结合目标检测的运动控制逻辑-Raspi代码
 ## 参数定义以及高层初始化定义
-*头文件
+* 头文件
 ```cpp
 #include "unitree_legged_sdk/unitree_legged_sdk.h"
 #include <math.h>
@@ -11,7 +11,7 @@
 
 using namespace UNITREE_LEGGED_SDK;
 ```
-*UDP的端口申明以及结构体定义
+* UDP的端口申明以及结构体定义
 ```cpp
 LinuxUdp::UdpServer udp_server(8900); //从8900端口接收
 
@@ -25,7 +25,7 @@ struct PACK
 bool run_flag = false;
 int dance_cnt = 0;
 ```
-*Custom中的高层控制以及底层UDP
+* Custom中的高层控制以及底层UDP
 ```cpp
 class Custom
 {
@@ -61,7 +61,7 @@ void Custom::UDPSend()
 ```
 
 ## Robcontrol-控制逻辑部分
-*主体逻辑
+* 主体逻辑
 ```cpp
  if(motiontime > 0 ){
         switch(pack->mode)    //目标检测后的不同模式传入
@@ -108,7 +108,7 @@ void Custom::UDPSend()
 ```
 
 ## main函数-进行loop循环
-*关于底层udp传输的loop循环
+* 关于底层udp传输的loop循环
 ```cpp
 int main(void) 
 {
