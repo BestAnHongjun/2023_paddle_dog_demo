@@ -13,23 +13,15 @@
 
 * 头文件
 ```cpp
+#include "unitree_legged_sdk/unitree_legged_sdk.h"
+#include <math.h>
+#include <iostream>
 #include <unistd.h>
-#include <stdlib.h>
-#include <UnitreeCameraSDK.hpp>
-
-#include "viz.h"
-#include "opencv.h"
+#include <string.h>
 #include "LinuxUdp.h"
-#include "paddle_api.h"
 
-using namespace LinuxUdp;
-using namespace paddle::lite_api;
-```
-* 定义模型输入大小
-输入大小与netron.app可视化网站查看到的大小保持一致。
-```cpp
-static const int INPUT_W = 320;
-static const int INPUT_H = 320;
+
+using namespace UNITREE_LEGGED_SDK;
 ```
 
 * UDP的端口申明以及结构体定义

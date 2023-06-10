@@ -2,6 +2,29 @@
 
 项目主页：[AI Studio](https://aistudio.baidu.com/aistudio/projectdetail/6112816)
 
+## 预期目标：
+* 使用mini-HaGRID数据集，借助PaddleDetection工具训练一个可以识别like、call、stop三种手势的目标检测模型
+
+![](https://ai-studio-static-online.cdn.bcebos.com/51b752c5a1e64f88af002ee00638788a7a071aeb0553484699b8593544044cb8)
+
+* 借助PaddleLite工具将检测模型部署至宇树Go1四足机器人
+* 结合运动SDK，实现：
+    * 没有检测到手势，小狗原地不动
+    * 检测到like手势时，进行运动跟随
+    
+    ![](https://ai-studio-static-online.cdn.bcebos.com/9c8906d117104777ae9e0fc4daa560c1faadfe0f454d4d04896dfd8a9c5fffbf)
+    
+    * 检测到call手势时，小狗跳舞
+    
+    ![](https://ai-studio-static-online.cdn.bcebos.com/1b7f006cf91f4c3292123a3a8e98a90aedaaeb52e5b64438af42745786a95d6b)
+    
+    
+    * 检测到stop手势时，原地静止跟随
+    
+    ![](https://ai-studio-static-online.cdn.bcebos.com/6455314b3e6d4df1af539b4fd90ed492985d3a3a2ce64d588edfbf1a69230121)
+    
+    
+
 # 一、模型训练教程
 请参考[项目主页](https://aistudio.baidu.com/aistudio/projectdetail/6112816)。
 
@@ -18,6 +41,12 @@ cd 2023_paddle_dog_demo
 cd nano1-workspace
 ```
 * 杀进程
+```sh
+ps -aux | grep point_cloud_node | awk '{print $2}' | xargs kill -9
+ps -aux | grep mqttControlNode | awk '{print $2}' | xargs kill -9
+ps -aux | grep live_human_pose | awk '{print $2}' | xargs kill -9
+ps -aux | grep rosnode | awk '{print $2}' | xargs kill -9
+```
 * 运行nano1节点
 ```
 ./bin/det_hand
@@ -35,6 +64,8 @@ cd pi-workspace
 # 三、代码解释
 * [Nano1节点代码解释](./nano1-workspace/README.md)
 * [Pi节点代码解释](./pi-workspace/README.md)
+
+<hr>
 
 ### 贡献者：
 * 安泓郡（Coder.AN, an.hongjun@foxmail.com）
