@@ -181,8 +181,8 @@ int main(int argc, char *argv[]){
         printf("mode:%d delta_w:%.2f delta_h:%.2f\n", pack.mode, pack.delta_w, pack.delta_h);
         udp_client.UdpSend((void*)&pack, sizeof(PACK));
 
-        cv::imshow("demo", img);
-        cv::waitKey(5);
+        // cv::imshow("demo", img);
+        // cv::waitKey(5);
     }
     
     cam.stopCapture(); ///< stop camera capturing
