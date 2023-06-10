@@ -1,5 +1,16 @@
 # 关于结合目标检测的运动控制逻辑-Raspi代码
-## 参数定义以及高层初始化定义
+## 一、项目目录
+* bin: 存放编译好的二进制可执行文件
+* include: 存放C++头文件
+* lib: 存放编译好的动态链接库
+* main: 主程序代码(**关键**)
+* build.sh: 编译脚本
+* CMakeLists.txt: CMake文件
+
+## 二、主程序代码讲解
+[follow.cpp](main/follow.cpp)
+### 2.1 参数定义以及高层初始化定义
+
 * 头文件
 ```cpp
 #include "unitree_legged_sdk/unitree_legged_sdk.h"
@@ -60,7 +71,7 @@ void Custom::UDPSend()
 }
 ```
 
-## Robcontrol-控制逻辑部分
+### 2.2 Robcontrol-控制逻辑部分
 * 主体逻辑
 ```cpp
  if(motiontime > 0 ){
@@ -107,7 +118,7 @@ void Custom::UDPSend()
     run_flag = false;
 ```
 
-## main函数-进行loop循环
+### 2.3 main函数-进行loop循环
 * 关于底层udp传输的loop循环
 ```cpp
 int main(void) 
@@ -137,3 +148,10 @@ int main(void)
 ```
 
 请[点击此处](main/follow.cpp)打开完整代码。
+
+## 三、编译方法
+* 修改main/follow.cpp和CMakeLists.txt
+* 运行编译脚本进行编译。
+```sh
+./build.sh
+```
