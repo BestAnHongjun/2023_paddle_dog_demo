@@ -3,14 +3,23 @@
 #include <UnitreeCameraSDK.hpp>
 
 #include "viz.h"
+#include "opencv.h"
+#include "LinuxUdp.h"
 #include "paddle_api.h"
 #include "edge_timer.h"
-#include "udp_img_trans.h"
+
+using namespace LinuxUdp;
 using namespace paddle::lite_api;
 
-static const int INPUT_W = 416;
-static const int INPUT_H = 416;
+static const int INPUT_W = 320;
+static const int INPUT_H = 320;
 
+struct PACK
+{
+    float delta_w;
+    float delta_h;
+    int mode;
+};
 
 int64_t ShapeProduction(const shape_t& shape) {
     int64_t res = 1;
@@ -29,6 +38,9 @@ void blobFromImage(cv::Mat& img, float* blob){
             float r = (float)pix[0];
             float g = (float)pix[1];
             float b = (float)pix[2];
+            r = ((r / 255.0) - 0.485) / 0.229;
+            g = ((g / 255.0) - 0.456) / 0.224;
+            b = ((b / 255.0) - 0.406) / 0.225;
             blob[0 * img_w * img_h + h * img_w + w] = r;
             blob[1 * img_w * img_h + h * img_w + w] = g;
             blob[2 * img_w * img_h + h * img_w + w] = b;
@@ -37,18 +49,13 @@ void blobFromImage(cv::Mat& img, float* blob){
 }
 
 int main(int argc, char *argv[]){
-    if (argc != 3)
-    {
-        std::cout << "Usage: demo_dog <ip> <port>" << std::endl;
-    }
-
     Timer timer_all("all");
-    UDPImgSender img_sender_debug(argv[1], atoi(argv[2]));
+    UdpClient udp_client("192.168.123.161", 8900);
 
     // init unitree camera
     int deviceNode = 1;
-    cv::Size frameSize(1856, 800); ///< default frame size 1856x800
-    int fps = 30; ///< default camera fps: 30
+    cv::Size frameSize(928, 400); ///< default frame size 1856x800
+    int fps = 100; ///< default camera fps: 30
     UnitreeCamera cam(deviceNode); ///< init camera by device node number
     if(!cam.isOpened())   ///< get camera open state
         exit(EXIT_FAILURE);
@@ -59,7 +66,7 @@ int main(int argc, char *argv[]){
     
     // init predictor
     MobileConfig config;
-    config.set_model_from_file("shared/yolox_int16.nb");
+    config.set_model_from_file("shared/picodet.nb");
     config.set_power_mode(static_cast<paddle::lite_api::PowerMode>(0));
     config.set_threads(4);
     std::shared_ptr<PaddlePredictor> predictor = CreatePaddlePredictor<MobileConfig>(config);
@@ -76,8 +83,13 @@ int main(int argc, char *argv[]){
     usleep(500000);
     std::vector<uint8_t> buffer;
     cv::Mat img, rgb_img, pr_img;
+
+    PACK pack;
+
     while(cam.isOpened()){
         timer_all.start();
+
+        // read img
         cv::Mat left,right;
         if(!cam.getRectStereoFrame(left,right)){ ///< get rectify left,right frame  
             usleep(1000);
@@ -100,24 +112,62 @@ int main(int argc, char *argv[]){
         auto num_data = num_tensor->data<int>();
         std::cout << num_data[0] << std::endl;
 
+        int max_cls = -1;
+        float max_area = 0;
+        float cx, cy;
+
         // viz
         for (int i = 0; i < num_data[0]; i++)
         {
             const float* res = res_data + i * 6;
             int cls = int(res[0]);
+            if (cls == 3) continue; // no_gesture
             float score = res[1];
+            if (score < 0.6) continue;
             float x1 = res[2];
             float y1 = res[3];
             float x2 = res[4];
             float y2 = res[5];
-            if (score < 0.5) continue;
+            float area = (x2 - x1) * (y2 - y1);
+            if (area > max_area)
+            {
+                cx = (x1 + x2) / 2.0;
+                cy = (y1 + y2) / 2.0;
+                max_area = area;
+                max_cls = cls;
+            }
             printf("cls:%d score:%.2f x1:%.2f y1:%.2f x2:%.2f y2:%.2f\n", cls, score, x1, y1, x2, y2);
             viz(img, cls, score, x1, y1, x2 - x1, y2 - y1);
         }
-        if (argc == 3)
+
+        if (max_cls != -1)
         {
-            img_sender_debug.send(img);
+            pack.delta_w = (frameSize.width >> 3) - cx;
+            pack.delta_h = (frameSize.height >> 2) - cy;
+            if (max_cls == 0)
+            {   // 666
+                pack.mode = 1;  // 跳舞
+                pack.delta_w = 0;
+                pack.delta_h = 0;
+            }
+            else if (max_cls == 1)
+            {   // like
+                pack.mode = 0;  // 跟随
+            }
+            else if (max_cls == 2)
+            {   // stop
+                pack.mode = 2;  // 停止
+            }
         }
+        else 
+        {
+            pack.mode = -1;
+            pack.delta_w = 0;
+            pack.delta_h = 0;
+        }
+        printf("mode:%d delta_w:%.2f delta_h:%.2f\n", pack.mode, pack.delta_w, pack.delta_h);
+        udp_client.UdpSend((void*)&pack, sizeof(PACK));
+        
         timer_all.end();
     }
     
