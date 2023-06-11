@@ -47,6 +47,15 @@ ps -aux | grep mqttControlNode | awk '{print $2}' | xargs kill -9
 ps -aux | grep live_human_pose | awk '{print $2}' | xargs kill -9
 ps -aux | grep rosnode | awk '{print $2}' | xargs kill -9
 ```
+* 修改系统时间
+将时间修改为你当前的时间。时间不对可能会影响CMake程序编译。
+```sh
+sudo date -s "2023-6-11 21:23:00"
+```
+* 编译程序
+```sh
+./build.sh
+```
 * 运行nano1节点
 ```
 ./bin/det_hand
@@ -55,6 +64,15 @@ ps -aux | grep rosnode | awk '{print $2}' | xargs kill -9
 * 进入pi-workspace目录
 ```sh
 cd pi-workspace
+```
+* 修改系统时间
+将时间修改为你当前的时间。时间不对可能会影响CMake程序编译。
+```sh
+sudo date -s "2023-6-11 21:23:00"
+```
+* 编译程序
+```sh
+./build.sh
 ```
 * 运行pi节点
 ```
